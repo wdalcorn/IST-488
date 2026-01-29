@@ -1,10 +1,13 @@
 import streamlit as st
+import Lab1
+import Lab2
 
-st.title("IST 488 - Labs and Homework")
+# Set up the navigation
+pg = st.navigation([
+    st.Page(Lab2.lab2, title="Lab 2 - Document Summarizer", icon="📄", default=True),
+    st.Page(Lab1.lab1, title="Lab 1", icon="🔬")
+])
 
-lab1_page = st.Page("Lab1.py", title="Lab 1", icon="🔬")
-hw1_page = st.Page("HW1.py", title="Homework 1", icon="📝")
-
-pg = st.navigation([lab1_page, hw1_page])
+# Run the selected page
 pg.run()
 
