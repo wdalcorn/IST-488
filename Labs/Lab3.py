@@ -2,42 +2,42 @@ import streamlit as st
 from openai import OpenAI
 
 def lab3():
-
     st.title("🤖 Lab 3 - Chatbot with Memory")
-
+    
     # Initialize OpenAI client from secrets
     if "OPENAI_API_KEY" not in st.secrets:
         st.error("Please add your OPENAI_API_KEY to Streamlit secrets!")
         st.stop()
-
+    
     client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
+    
     # System prompt - tells the bot how to behave
     SYSTEM_PROMPT = {
         "role": "system",
         "content": """You are a helpful assistant that explains things in a way that a 10-year-old can understand. 
-        Use simple words and fun examples. After answering each question, always ask "Do you want more info?" 
-        If the user says yes, provide more details. If the user says no, ask what else you can help with."""
+        Use simple words and fun examples. 
+        
+        After answering each question, ALWAYS ask "Do you want more info?"
+        
+        If the user says yes (or variations like "yeah", "sure", "tell me more"):
+        - Provide additional details about the topic
+        - Then ask again: "Do you want more info?"
+        
+        If the user says no (or variations like "nope", "I'm good"):
+        - Ask "What else can I help you with?"
+        
+        Keep your answers friendly, simple, and easy to understand."""
     }
-
+    
     # Initialize session state for storing messages
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
+    
     # Display all previous messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-
-    # Get user input
-    if prompt := st.chat_input("What would you like to know?"):
-        # Add user message to history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # Display user message
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
+    
     # Function to get buffered messages (last 2 exchanges)
     def get_buffered_messages():
         buffered = [SYSTEM_PROMPT]  # Always include system prompt
@@ -47,9 +47,17 @@ def lab3():
         
         buffered.extend(recent)
         return buffered
-
-    # Get buffered messages
-    if prompt:
+    
+    # Get user input
+    if prompt := st.chat_input("What would you like to know?"):
+        # Add user message to history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        # Get buffered messages
         messages_to_send = get_buffered_messages()
         
         # Generate response with streaming
@@ -72,3 +80,13 @@ def lab3():
         
         # Add assistant response to history
         st.session_state.messages.append({"role": "assistant", "content": full_response})
+    
+    # Sidebar with chat controls
+    with st.sidebar:
+        st.header("💬 Chat Controls")
+        st.write(f"**Total messages:** {len(st.session_state.messages)}")
+        st.write(f"**Messages in buffer:** {min(4, len(st.session_state.messages))}")
+        
+        if st.button("🗑️ Clear Chat History"):
+            st.session_state.messages = []
+            st.rerun()
