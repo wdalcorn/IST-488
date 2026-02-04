@@ -49,6 +49,7 @@ def lab3():
         return buffered
 
     # Get buffered messages
+    if prompt:
         messages_to_send = get_buffered_messages()
         
         # Generate response with streaming
