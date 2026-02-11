@@ -116,7 +116,7 @@ def lab4():
 
         # Send to LLM with context in system prompt
         messages_to_send = [
-            {"role": "system", "content": "You are a helpful AI assistant. Use the following context to answer the question. If you are using information from the provided context, make that clear in your response.\n\n" + context},
+            {"role": "system", "content": "You are a helpful AI assistant. Use the following context to answer the question.If you are using information from the provided context, make that clear in your response.\n\n" + context},
         ]
         messages_to_send.extend(st.session_state.lab4_messages)
 
