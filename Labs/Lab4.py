@@ -81,34 +81,52 @@ def lab4():
     #### MAIN APP ####
     st.title('Lab 4: Chatbot using RAG')
 
-    #### QUERYING A COLLECTION -- ONLY USED FOR TESTING ####
+    # Initialize chat history
+    if 'lab4_messages' not in st.session_state:
+        st.session_state.lab4_messages = []
 
-    topic = st.sidebar.text_input('Topic', placeholder='Type your topic (e.g., GenAI)...')
+    # Display previous messages
+    for message in st.session_state.lab4_messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+    
+    if prompt := st.chat_input("Ask a question about IST courses..."):
+        # Display user message
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        st.session_state.lab4_messages.append({"role": "user", "content": prompt})
 
-    if topic:
+        # Query the vector DB for relevant context
         client = st.session_state.openai_client
         response = client.embeddings.create(
-            input=topic,
-            model='text-embedding-3-small')
-        
-        # Get the embedding
+            input=prompt,
+            model='text-embedding-3-small'
+        )
         query_embedding = response.data[0].embedding
 
-        # Get the text related to this question (this prompt)
         results = st.session_state.Lab4_VectorDB.query(
             query_embeddings=[query_embedding],
-            n_results=3 # The number of closest documents to return
+            n_results=3
         )
 
-        # Display the results
-        st.subheader(f'Results for: {topic}')
-
+        # Build context from the top 3 matching documents
+        context = ""
         for i in range(len(results['documents'][0])):
-            doc = results['documents'][0][i]
-            doc_id = results['ids'][0][i]
+            context += results['documents'][0][i] + "\n\n"
 
-            st.write(f'**{i+1}, {doc_id}**')
+        # Send to LLM with context in system prompt
+        messages_to_send = [
+            {"role": "system", "content": "You are a helpful AI assistant. Use the following context to answer the question. If you are using information from the provided context, make that clear in your response.\n\n" + context},
+        ]
+        messages_to_send.extend(st.session_state.lab4_messages)
 
-    else:
-        st.info('Enter a topic in the sidebar to search the collection')
-        
+        # Stream the response
+        with st.chat_message("assistant"):
+            stream = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages_to_send,
+                stream=True
+            )
+            response_text = st.write_stream(stream)
+
+        st.session_state.lab4_messages.append({"role": "assistant", "content": response_text})
