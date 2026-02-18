@@ -8,6 +8,7 @@ import HW.HW1 as HW1
 import HW.HW2 as HW2
 import HW.HW3 as HW3
 import HW.HW4 as HW4
+import HW.HW5 as HW5
 
 # Set up the navigation with separate sections
 pg = st.navigation({
@@ -19,6 +20,7 @@ pg = st.navigation({
         st.Page(Lab1.lab1, title="Lab 1", icon="🔬"),
     ],
     "Homework": [
+        st.Page(HW5.hw5, title="HW5 - Enhanced Chatbot", icon="🧠"),
         st.Page(HW4.hw4, title="HW4 - iSchool Chatbot", icon="👨🏻‍🏫"),
         st.Page(HW3.hw3, title="HW3 - URL Chatbot", icon="🤖"),
         st.Page(HW2.hw2, title="HW 2 - URL Summarizer", icon="🌐"),
