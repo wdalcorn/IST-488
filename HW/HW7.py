@@ -2,12 +2,12 @@ import streamlit as st
 import sys
 import json
 from openai import OpenAI
+
 __import__('pysqlite3')
 sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb
 
 def hw7():
-
     st.title('HW 7: Law Firm News Monitor')
     st.caption("Ask about client news. Try: 'Find the most interesting news' or 'Find news about JPMorgan'")
 
@@ -15,17 +15,23 @@ def hw7():
     if 'openai_client' not in st.session_state:
         st.session_state.openai_client = OpenAI(api_key=st.secrets.OPENAI_API_KEY)
 
-        with st.sidebar:
-            st.header("Settings")
-            use_advanced = st.checkbox("Use advanced model (GPT-4.1)", value=False)
-            model = 'gpt-4.1' if use_advanced else 'gpt-4.1-mini'
-            st.caption(f"Current model: {model}")
+    # ---- SIDEBAR: MODEL SELECTION ----
+    with st.sidebar:
+        st.header("Settings")
+        use_advanced = st.checkbox("Use advanced model (GPT-4.1)", value=False)
+        model = 'gpt-4.1' if use_advanced else 'gpt-4.1-mini'
+        st.caption(f"Current model: {model}")
 
-     # ---- LOAD CHROMADB (only once per session) ----
+    # ---- LOAD CHROMADB (only once per session) ----
     if 'HW7_VectorDB' not in st.session_state:
-        chroma_client = chromadb.PersistentClient(path='./news_chroma_db')
-        collection = chroma_client.get_collection('news_articles')
-        st.session_state.HW7_VectorDB = collection
+        try:
+            chroma_client = chromadb.PersistentClient(path='./news_chroma_db')
+            collection = chroma_client.get_collection('news_articles')
+            st.session_state.HW7_VectorDB = collection
+            st.success(f"Loaded {collection.count()} articles!")
+        except Exception as e:
+            st.error(f"Error loading ChromaDB: {e}")
+            return
 
     collection = st.session_state.HW7_VectorDB
 
@@ -52,7 +58,8 @@ def hw7():
                 f"Content: {doc[:500]}\n"
             )
         return "\n---\n".join(output)
-    
+
+    # ---- TOOL: Find most interesting news ----
     def find_interesting_news(n=5):
         query_vec = embed_query(
             "significant legal regulatory financial risk lawsuit controversy scandal"
@@ -73,7 +80,8 @@ def hw7():
             include=['documents', 'metadatas', 'distances']
         )
         return format_results(results)
-    
+
+    # ---- FUNCTION CALLING TOOLS DEFINITION ----
     tools = [
         {
             "type": "function",
@@ -107,10 +115,10 @@ def hw7():
     ]
 
     # ---- SYSTEM PROMPT ----
-system_prompt = """You are a news intelligence assistant for a large global law firm.
+    system_prompt = """You are a news intelligence assistant for a large global law firm.
 Your job is to help lawyers stay informed about their clients' recent news.
 
-When asked for news:
+When asked for interesting news:
 - Return a ranked numbered list (most to least newsworthy)
 - Briefly explain WHY each article is interesting or legally relevant
 - Focus on: lawsuits, regulatory actions, financial risk, scandals, major deals
@@ -122,22 +130,19 @@ When asked about a specific company or topic:
 Always include the article date and URL for each result.
 Be concise and professional."""
 
-
-# ---- CHAT SESSION STATE ----
-if 'hw7_messages' not in st.session_state:
+    # ---- CHAT SESSION STATE ----
+    if 'hw7_messages' not in st.session_state:
         st.session_state.hw7_messages = []
 
     # Display chat history
-for msg in st.session_state.hw7_messages:
-    with st.chat_message(msg['role']):
-        st.markdown(msg['content'])
+    for msg in st.session_state.hw7_messages:
+        with st.chat_message(msg['role']):
+            st.markdown(msg['content'])
 
-
-# ---- CHAT INPUT ----
+    # ---- CHAT INPUT ----
     user_input = st.chat_input("Ask about client news...")
 
     if user_input:
-        # Show user message
         st.session_state.hw7_messages.append({'role': 'user', 'content': user_input})
         with st.chat_message('user'):
             st.markdown(user_input)
@@ -145,28 +150,24 @@ for msg in st.session_state.hw7_messages:
         with st.chat_message('assistant'):
             with st.spinner('Searching news...'):
 
-                # Build messages for LLM
                 messages = [{'role': 'system', 'content': system_prompt}]
                 messages += st.session_state.hw7_messages
 
-                # First LLM call - may trigger a tool
                 client = st.session_state.openai_client
                 response = client.chat.completions.create(
-                    model= model,
+                    model=model,
                     messages=messages,
-                    tools= tools,
+                    tools=tools,
                     tool_choice='auto'
                 )
 
                 resp_msg = response.choices[0].message
 
-                # If the LLM wants to call a tool
                 if resp_msg.tool_calls:
                     tool_call = resp_msg.tool_calls[0]
                     tool_name = tool_call.function.name
                     tool_args = json.loads(tool_call.function.arguments)
 
-                    # Run the tool (RAG search)
                     if tool_name == 'find_interesting_news':
                         tool_result = find_interesting_news(n=tool_args.get('n', 5))
                     elif tool_name == 'find_news_about':
@@ -175,7 +176,6 @@ for msg in st.session_state.hw7_messages:
                             n=tool_args.get('n', 5)
                         )
 
-                    # Second LLM call with tool result
                     messages.append(resp_msg)
                     messages.append({
                         'role': 'tool',
@@ -191,10 +191,7 @@ for msg in st.session_state.hw7_messages:
                     reply = st.write_stream(final_response)
 
                 else:
-                    # No tool needed - direct answer
                     reply = resp_msg.content
                     st.markdown(reply)
 
         st.session_state.hw7_messages.append({'role': 'assistant', 'content': reply})
-
-
