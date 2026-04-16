@@ -6,6 +6,7 @@ import Labs.Lab4 as Lab4
 import Labs.Lab5 as Lab5
 import Labs.Lab6 as Lab6
 import Labs.Lab8 as Lab8
+import Labs.Lab9 as Lab9
 import HW.HW1 as HW1
 import HW.HW2 as HW2
 import HW.HW3 as HW3
@@ -16,7 +17,8 @@ import HW.HW7 as HW7
 # Set up the navigation with separate sections
 pg = st.navigation({
     "Labs": [
-        st.Page(Lab8.lab8, title="Lab 8 - Image Captioning Bot 📷", default=True),
+        st.Page(Lab9.lab9, title="Long term Memory Boy", default=True),
+        st.Page(Lab8.lab8, title="Lab 8 - Image Captioning Bot 📷"),
         st.Page(Lab6.lab6, title="Lab 6 - Responses AI", icon="👾"),
         st.Page(Lab5.lab5, title="Lab 5 - Weather Chatbot", icon="🌤️"),
         st.Page(Lab4.lab4, title="Lab 4 - Chatbot using RAG", icon="🔍"),
